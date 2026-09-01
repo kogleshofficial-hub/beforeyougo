@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   openGraph: { title: "BeforeYouGo — Know what you need before you go", description: "Prepare before you travel. Find a practical checklist, then verify it against the official source.", url: siteUrl, siteName: "BeforeYouGo", type: "website" },
   twitter: { card: "summary_large_image", title: "BeforeYouGo — Know what you need before you go", description: "Practical pre-visit checklists with official sources." },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } },
+  verification: { google: "LI6z3Avdq6RsVP2faZ6nlhcbRwvnMIdjJkrSBygvnZM" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
