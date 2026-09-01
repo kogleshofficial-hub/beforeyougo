@@ -5,21 +5,33 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getGuide } from "@/lib/guides";
 
+type CustomItem = { id: string; text: string; done: boolean };
+
 export default function GuidePage() {
   const { slug } = useParams<{ slug: string }>();
   const guide = getGuide(slug);
-  const storageKey = `beforeyougo:checklist:${slug}`;
+  const storageKey = `beforeyougo:checklist:${slug}:v2`;
   const [done, setDone] = useState<boolean[]>([]);
+  const [customItems, setCustomItems] = useState<CustomItem[]>([]);
+  const [customText, setCustomText] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     if (!guide) return;
     try {
       const saved = window.localStorage.getItem(storageKey);
-      const parsed = saved ? JSON.parse(saved) : [];
-      setDone(Array.isArray(parsed) && parsed.length === guide.items.length ? parsed.map(Boolean) : guide.items.map(() => false));
+      const parsed = saved ? JSON.parse(saved) : null;
+      const builtIn = Array.isArray(parsed?.done) && parsed.done.length === guide.items.length
+        ? parsed.done.map(Boolean)
+        : guide.items.map(() => false);
+      const custom = Array.isArray(parsed?.customItems)
+        ? parsed.customItems.filter((item: CustomItem) => item && typeof item.text === "string" && typeof item.id === "string" && typeof item.done === "boolean")
+        : [];
+      setDone(builtIn);
+      setCustomItems(custom);
     } catch {
       setDone(guide.items.map(() => false));
+      setCustomItems([]);
     } finally {
       setHydrated(true);
     }
@@ -27,16 +39,28 @@ export default function GuidePage() {
 
   useEffect(() => {
     if (!guide || !hydrated) return;
-    try { window.localStorage.setItem(storageKey, JSON.stringify(done)); } catch { /* Storage may be unavailable; the checklist still works for this visit. */ }
-  }, [done, guide, hydrated, storageKey]);
+    try { window.localStorage.setItem(storageKey, JSON.stringify({ done, customItems })); } catch { /* The checklist remains usable without storage. */ }
+  }, [done, customItems, guide, hydrated, storageKey]);
 
-  const completed = useMemo(() => done.filter(Boolean).length, [done]);
-  const progress = guide ? Math.round((completed / guide.items.length) * 100) : 0;
+  const builtInCompleted = useMemo(() => done.filter(Boolean).length, [done]);
+  const customCompleted = useMemo(() => customItems.filter((item) => item.done).length, [customItems]);
+  const totalItems = (guide?.items.length ?? 0) + customItems.length;
+  const completed = builtInCompleted + customCompleted;
+  const progress = totalItems ? Math.round((completed / totalItems) * 100) : 0;
 
   if (!guide) return <main><div className="shell detail"><Link href="/" className="back">← Back to guides</Link><div className="panel notfound"><h1>Guide not found</h1><p>We don't have a verified guide for that task yet.</p><Link href="/" className="primary">Browse available guides</Link></div></div></main>;
 
   const toggle = (index: number) => setDone((current) => current.map((value, itemIndex) => itemIndex === index ? !value : value));
-  const reset = () => setDone(guide.items.map(() => false));
+  const toggleCustom = (id: string) => setCustomItems((current) => current.map((item) => item.id === id ? { ...item, done: !item.done } : item));
+  const addCustom = (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = customText.trim();
+    if (!text) return;
+    setCustomItems((current) => [...current, { id: crypto.randomUUID(), text, done: false }]);
+    setCustomText("");
+  };
+  const removeCustom = (id: string) => setCustomItems((current) => current.filter((item) => item.id !== id));
+  const reset = () => { setDone(guide.items.map(() => false)); setCustomItems([]); };
 
   return (
     <main>
@@ -50,12 +74,20 @@ export default function GuidePage() {
             <h1>{guide.title}</h1>
             <p className="lead">{guide.summary}</p>
             <div className="notice"><strong>Verify before you leave.</strong><span>{guide.note}</span></div>
-            <div className="progress-head"><div><strong>Your preparation</strong><span>{completed} of {guide.items.length} complete</span></div><button type="button" className="textbutton" onClick={reset} disabled={completed === 0}>Reset</button></div>
+            <div className="progress-head"><div><strong>Your preparation</strong><span>{completed} of {totalItems} complete · {progress}%</span></div><button type="button" className="textbutton" onClick={reset} disabled={completed === 0}>Reset all</button></div>
             <div className="progress" aria-label={`${progress}% complete`}><span style={{ width: `${progress}%` }} /></div>
+
             <div className="checklist" aria-label="Personal preparation checklist">
               {guide.items.map((item, index) => <label className={`check ${done[index] ? "checked" : ""}`} key={item}><input type="checkbox" checked={done[index] || false} onChange={() => toggle(index)} /><span className="checkmark" aria-hidden="true">✓</span><span>{item}</span></label>)}
+              {customItems.map((item) => <div className={`check custom-check ${item.done ? "checked" : ""}`} key={item.id}><label><input type="checkbox" checked={item.done} onChange={() => toggleCustom(item.id)} /><span className="checkmark" aria-hidden="true">✓</span><span>{item.text}</span></label><button type="button" className="remove-item" onClick={() => removeCustom(item.id)} aria-label={`Remove ${item.text}`}>×</button></div>)}
             </div>
-            <p className="privacy"><span>🔒</span> Your checklist is private to this browser. Other visitors have their own separate checklist and cannot see your checkmarks.</p>
+
+            <form className="add-item" onSubmit={addCustom}>
+              <label htmlFor="custom-item"><strong>Add your own item</strong><span>Include anything personal you need to remember.</span></label>
+              <div className="add-row"><input id="custom-item" value={customText} onChange={(event) => setCustomText(event.target.value)} placeholder="e.g. Bring a pen, confirmation email…" maxLength={160} /><button type="submit" disabled={!customText.trim()}>Add item</button></div>
+            </form>
+
+            <p className="privacy"><span>🔒</span> Your preparation is private to this browser. Your custom items and checkmarks are never published or shared with other visitors.</p>
             <h2>Recommended flow</h2>
             <div className="flow">{guide.steps.map((step, index) => <div className="flowitem" key={step}><b>{String(index + 1).padStart(2, "0")}</b><span>{step}</span></div>)}</div>
             <h2>Official source</h2>
