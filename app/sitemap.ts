@@ -1,17 +1,16 @@
 import type { MetadataRoute } from "next";
+import { guides } from "@/lib/guides";
+
+const siteUrl = "https://beforeyougo-gray.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://beforeyougo.vercel.app";
-  const slugs = [
-    "malaysia-passport-renewal",
-    "malaysia-driving-licence-renewal",
-    "us-passport-renewal",
-    "malaysia-learner-licence-renewal",
-    "passport-renewal-starter",
-    "before-any-government-visit",
-  ];
   return [
-    { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    ...slugs.map(slug => ({ url: `${base}/guide/${slug}`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.8 })),
+    { url: siteUrl, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
+    ...guides.map((guide) => ({
+      url: `${siteUrl}/guide/${guide.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
   ];
 }
