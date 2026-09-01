@@ -1,17 +1,80 @@
 "use client";
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { getGuide, guides } from "@/lib/guides";
 
-const guides:Record<string,{title:string;country:string;category:string;icon:string;summary:string;source:string;sourceName:string;updated:string;items:string[];note:string;steps:string[]}>= {
- "malaysia-passport-renewal":{title:"Renew a Malaysian passport",country:"Malaysia",category:"Travel",icon:"✈️",summary:"A practical pre-visit checklist for Malaysian passport renewal.",source:"https://www.imi.gov.my/index.php/en/main-services/passport/malaysian-international-passport/",sourceName:"Malaysian Immigration Department",updated:"1 Sep 2026",items:["MyKad or temporary identification document","Previous passport for a renewal","For applicants under 18: check the parent/guardian requirements for your category","Confirm the receiving office before travelling"],note:"Requirements can differ by applicant category. Confirm the latest instructions for your situation on the official source before leaving.",steps:["Check your applicant category","Prepare your identity document and previous passport","Confirm the correct Immigration office","Bring category-specific documents","Follow the official application or renewal process"]},
- "malaysia-driving-licence-renewal":{title:"Renew a Malaysian driving licence",country:"Malaysia",category:"Transport",icon:"🚗",summary:"Know what to bring and where renewal can be completed before visiting JPJ, UTC, a kiosk or participating post office.",source:"https://www.jpj.gov.my/en/competent-drivers-license-cdl-renewal/",sourceName:"JPJ Malaysia",updated:"1 Sep 2026",items:["Original MyKad or passport","Original driving licence or copy","Representative identification if someone is acting for you","Photo requirements may apply","Payment for the applicable licence class and period"],note:"JPJ lists renewal conditions, locations and fees by licence type. Verify your class and eligibility on the official page before travelling.",steps:["Confirm your licence type and eligibility","Prepare identification and current licence","Choose an eligible renewal location","Check the current fee","Complete the renewal"]},
- "us-passport-renewal":{title:"Renew a U.S. passport",country:"United States",category:"Travel",icon:"🛂",summary:"Start with the official eligibility routes for online or mail renewal before making a trip.",source:"https://travel.state.gov/en/passports/renew-replace.html",sourceName:"U.S. Department of State",updated:"1 Sep 2026",items:["Confirm you are eligible for the renewal route you want","Use the official instructions for online or mail renewal","If in-person application is required, check current appointment/location rules","Prepare the required passport materials"],note:"Eligibility depends on your passport history and circumstances. The official Department of State page is the source of truth.",steps:["Check renewal eligibility","Choose online, mail or in-person route","Prepare the required materials","Follow official submission instructions","Track your application if available"]},
- "malaysia-learner-licence-renewal":{title:"Renew a Malaysian learner licence",country:"Malaysia",category:"Transport",icon:"🪪",summary:"A quick checklist for LDL renewal, including the maximum period and documents JPJ identifies.",source:"https://www.jpj.gov.my/en/renewal-of-learners-license-ldl/",sourceName:"JPJ Malaysia",updated:"1 Sep 2026",items:["Original MyKad or passport","Original learner/driving licence or copy","Representative identification when applicable","1 colour photo with the specified background and dimensions","Valid passport for foreign applicants"],note:"JPJ states that LDL renewal cannot exceed two years and the applicant must not be blacklisted. Check the current fee for your class.",steps:["Check your LDL period","Prepare identification and current licence","Check photo requirements","Choose an eligible renewal location","Pay the applicable fee"]},
- "passport-renewal-starter":{title:"Passport renewal — global starter",country:"International",category:"Travel",icon:"🌍",summary:"A country-neutral preparation checklist for opening your passport authority's instructions.",source:"https://www.icao.int/Security/FAL/TRIP/Pages/Publications.aspx",sourceName:"ICAO TRIP resources",updated:"1 Sep 2026",items:["Check your country's official passport authority","Confirm whether renewal is online, by mail or in person","Check identity-document requirements","Check photo rules and validity requirements","Confirm fees, appointment rules and processing times"],note:"This is a preparation guide, not a universal legal checklist. Passport rules are country-specific; always verify against your government authority.",steps:["Identify your passport authority","Open its official renewal instructions","Confirm your eligibility","Prepare the listed documents","Confirm where and when to submit"]},
- "before-any-government-visit":{title:"Before any government-office visit",country:"International",category:"General",icon:"🏛️",summary:"A universal pre-visit workflow for checking requirements before travelling to a public-service office.",source:"https://www.oecd.org/gov/digital-government/",sourceName:"OECD Digital Government",updated:"1 Sep 2026",items:["Confirm the exact service you need","Check the official agency website","Confirm appointment requirements","Confirm documents and acceptable originals/copies","Check opening hours and location","Save the official instructions for reference"],note:"This checklist helps you prepare; it does not replace the official agency's instructions.",steps:["Define the exact service","Find the responsible official agency","Verify requirements","Confirm appointment and location","Prepare everything before leaving"]}
-};
+export function generateStaticParams() {
+  return guides.map((guide) => ({ slug: guide.slug }));
+}
 
-export default function Guide(){const {slug}=useParams<{slug:string}>();const g=guides[slug];const [done,setDone]=useState<boolean[]>(()=>g?g.items.map(()=>false):[]);const completed=useMemo(()=>done.filter(Boolean).length,[done]);
-if(!g)return <main><div className="shell detail"><Link href="/" className="back">← Back to guides</Link><div className="panel" style={{marginTop:24}}><h1>Guide not found</h1><p>We don't have a verified guide for that task yet.</p><Link href="/" className="primary">Browse available guides</Link></div></div></main>;
-return <main><header className="shell nav"><Link href="/" className="brand"><span className="mark">✓</span>BeforeYouGo</Link><nav className="navlinks"><Link href="/#guides">Guides</Link><Link href="/#how">How it works</Link></nav></header><section className="shell detail"><Link href="/" className="back">← Back to guides</Link><div className="detailgrid"><article className="panel"><div className="cardtop"><span className="icon">{g.icon}</span><span className="pill">{g.country}</span></div><h1>{g.title}</h1><p style={{color:"#69736b",lineHeight:1.7}}>{g.summary}</p><div className="notice">⚠️ <strong>Verify before you leave.</strong> {g.note}</div><h2>Bring / prepare</h2>{g.items.map((item,i)=><div className="check" key={item}><input type="checkbox" checked={done[i]||false} onChange={()=>setDone(d=>d.map((v,j)=>j===i?!v:v))} id={`item-${i}`}/><label htmlFor={`item-${i}`}>{item}</label></div>)}<p className="tiny" style={{marginTop:14}}>{completed} of {g.items.length} preparation items checked. Your checklist is kept in this browser only.</p><h2>Recommended flow</h2>{g.steps.map((s,i)=><div className="check" key={s}><span style={{fontWeight:800,color:"#3f7655",minWidth:24}}>0{i+1}</span><label>{s}</label></div>)}<h2>Official source</h2><div className="source"><div><strong>{g.sourceName}</strong><div className="tiny">Last checked for this guide: {g.updated}</div></div><a href={g.source} target="_blank" rel="noreferrer">Open official source ↗</a></div></article><aside className="panel side"><h3>Before you leave</h3><div className="sideitem"><strong>1. Confirm eligibility</strong><span>Rules can depend on age, status, document history or service type.</span></div><div className="sideitem"><strong>2. Check the source</strong><span>Use the official agency page as the final authority.</span></div><div className="sideitem"><strong>3. Confirm the location</strong><span>Some services are available only at selected offices or facilities.</span></div><div className="sideitem"><strong>4. Save what you need</strong><span>Keep the official page handy in case requirements have changed.</span></div><div className="sideitem"><strong>Privacy</strong><span>Your checkbox progress is stored only in this browser session. No account is required.</span></div></aside></div></section><footer className="shell footer"><strong>BeforeYouGo</strong><span>Preparation aid only · Always verify official requirements.</span></footer></main>}
+export default function GuidePage() {
+  const { slug } = useParams<{ slug: string }>();
+  const guide = getGuide(slug);
+  const storageKey = `beforeyougo:checklist:${slug}`;
+  const [done, setDone] = useState<boolean[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (!guide) return;
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      const parsed = saved ? JSON.parse(saved) : [];
+      setDone(Array.isArray(parsed) && parsed.length === guide.items.length ? parsed.map(Boolean) : guide.items.map(() => false));
+    } catch {
+      setDone(guide.items.map(() => false));
+    } finally {
+      setHydrated(true);
+    }
+  }, [guide, storageKey]);
+
+  useEffect(() => {
+    if (!guide || !hydrated) return;
+    try { window.localStorage.setItem(storageKey, JSON.stringify(done)); } catch { /* Private browsing may block storage; the checklist still works for the session. */ }
+  }, [done, guide, hydrated, storageKey]);
+
+  const completed = useMemo(() => done.filter(Boolean).length, [done]);
+  const progress = guide ? Math.round((completed / guide.items.length) * 100) : 0;
+
+  if (!guide) return <main><div className="shell detail"><Link href="/" className="back">← Back to guides</Link><div className="panel notfound"><h1>Guide not found</h1><p>We don't have a verified guide for that task yet.</p><Link href="/" className="primary">Browse available guides</Link></div></div></main>;
+
+  const toggle = (index: number) => setDone((current) => current.map((value, itemIndex) => itemIndex === index ? !value : value));
+  const reset = () => setDone(guide.items.map(() => false));
+
+  return (
+    <main>
+      <header className="shell nav"><Link href="/" className="brand"><span className="mark">✓</span>BeforeYouGo</Link><nav className="navlinks" aria-label="Primary navigation"><Link href="/#guides">Guides</Link><Link href="/#how">How it works</Link></nav></header>
+      <section className="shell detail">
+        <Link href="/" className="back">← Back to guides</Link>
+        <div className="detailgrid">
+          <article className="panel">
+            <div className="cardtop"><span className="icon" aria-hidden="true">{guide.icon}</span><span className="pill">{guide.country}</span></div>
+            <div className="detail-kicker"><span>{guide.category}</span><span>Source checked {guide.verified}</span></div>
+            <h1>{guide.title}</h1>
+            <p className="lead">{guide.summary}</p>
+
+            <div className="notice"><strong>Verify before you leave.</strong><span>{guide.note}</span></div>
+
+            <div className="progress-head"><div><strong>Your preparation</strong><span>{completed} of {guide.items.length} complete</span></div><button type="button" className="textbutton" onClick={reset} disabled={completed === 0}>Reset</button></div>
+            <div className="progress" aria-label={`${progress}% complete`}><span style={{ width: `${progress}%` }} /></div>
+
+            <div className="checklist" aria-label="Personal preparation checklist">
+              {guide.items.map((item, index) => <label className={`check ${done[index] ? "checked" : ""}`} key={item}><input type="checkbox" checked={done[index] || false} onChange={() => toggle(index)} /><span className="checkmark" aria-hidden="true">✓</span><span>{item}</span></label>)}
+            </div>
+            <p className="privacy"><span>🔒</span> Your checklist is private to this browser. Other visitors have their own separate checklist and cannot see your checkmarks.</p>
+
+            <h2>Recommended flow</h2>
+            <div className="flow">{guide.steps.map((step, index) => <div className="flowitem" key={step}><b>{String(index + 1).padStart(2, "0")}</b><span>{step}</span></div>)}</div>
+
+            <h2>Official source</h2>
+            <div className="source"><div><strong>{guide.sourceName}</strong><div className="tiny">Primary reference · {guide.scope}</div></div><a href={guide.source} target="_blank" rel="noopener noreferrer">Open official source ↗</a></div>
+          </article>
+
+          <aside className="panel side"><span className="side-label">Before you leave</span><h2>Four final checks</h2><div className="sideitem"><strong>01 · Eligibility</strong><span>Rules may depend on age, status, document history or service type.</span></div><div className="sideitem"><strong>02 · Documents</strong><span>Check whether originals, copies, photos or supporting documents are required.</span></div><div className="sideitem"><strong>03 · Location</strong><span>Some services are available only at selected offices or facilities.</span></div><div className="sideitem"><strong>04 · Freshness</strong><span>Open the official source immediately before your trip in case the rules have changed.</span></div><div className="side-note"><strong>Why this matters</strong><span>BeforeYouGo organizes information; it does not issue documents, make appointments or replace the agency that controls the process.</span></div></aside>
+        </div>
+      </section>
+      <footer className="shell footer"><div><strong>BeforeYouGo</strong><span>Preparation aid only · Always verify official requirements.</span></div><div className="creator">Created by Koglesh R. Murugan</div></footer>
+    </main>
+  );
+}
