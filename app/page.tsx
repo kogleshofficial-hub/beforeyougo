@@ -1,21 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { guides } from "@/lib/guides";
+
+const WORKSPACE_KEY = "beforeyougo:workspace:v2";
+const CHECKLIST_KEY = "beforeyougo:checklist:v2";
+type Saved = { id: string; title: string; items: { id: string; text: string; done: boolean }[]; updatedAt: string };
+
+function readSaved(): Saved | null {
+  try { const raw = localStorage.getItem(CHECKLIST_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
+  const [saved, setSaved] = useState<Saved | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const categories = ["All", ...Array.from(new Set(guides.map((guide) => guide.category)))];
+
+  useEffect(() => { setSaved(readSaved()); setHydrated(true); }, []);
+  useEffect(() => {
+    const sync = () => setSaved(readSaved());
+    window.addEventListener("focus", sync);
+    window.addEventListener("beforeyougo:checklist-updated", sync);
+    return () => { window.removeEventListener("focus", sync); window.removeEventListener("beforeyougo:checklist-updated", sync); };
+  }, []);
+
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return guides.filter((guide) => {
-      const matchesCategory = category === "All" || guide.category === category;
       const haystack = `${guide.title} ${guide.country} ${guide.category} ${guide.summary}`.toLowerCase();
-      return matchesCategory && (!normalized || haystack.includes(normalized));
+      return (category === "All" || guide.category === category) && (!normalized || haystack.includes(normalized));
     });
   }, [query, category]);
+  const done = saved?.items.filter((item) => item.done).length ?? 0;
+  const total = saved?.items.length ?? 0;
 
   return (
     <main>
@@ -33,8 +53,15 @@ export default function Home() {
           <input id="guide-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try “passport renewal” or “driving licence”…" autoComplete="off" />
           <button className="primary" type="submit">Find my checklist</button>
         </form>
-        <div className="trustrow" aria-label="Product principles"><span>✓ No account required</span><span>✓ Your checklist stays private</span><span>✓ Official source shown</span></div>
+        <div className="trustrow"><span>✓ No account required</span><span>✓ Your checklist stays private</span><span>✓ Official source shown</span></div>
       </section>
+
+      {hydrated && saved && total > 0 && (
+        <section className="shell saved-banner" aria-label="Saved checklist">
+          <div><span className="eyebrow">Your saved checklist</span><strong>{saved.title || "My checklist"}</strong><span>{done} of {total} complete · Saved on this device</span></div>
+          <Link className="primary" href="/my-checklist">Continue checklist →</Link>
+        </section>
+      )}
 
       <section id="guides" className="shell section" aria-labelledby="guides-title">
         <div className="sectionhead">
@@ -46,7 +73,7 @@ export default function Home() {
           {filtered.length ? filtered.map((guide) => <Link className="card" href={`/guide/${guide.slug}`} key={guide.slug}><div className="cardtop"><span className="icon" aria-hidden="true">{guide.icon}</span><span className="pill">{guide.country}</span></div><h3>{guide.title}</h3><p>{guide.summary}</p><div className="meta"><span>{guide.category}</span><span>Source checked {guide.verified}</span></div></Link>) : <div className="empty"><strong>No verified guide found.</strong><span>Try a broader search, or build a private checklist from scratch below.</span></div>}
         </div>
 
-        <div className="custom-cta"><div><span className="eyebrow">Nothing matches?</span><h2>Make your own checklist.</h2><p>Add exactly what you need for any visit, appointment, trip, application, or task. Your list stays on your device.</p></div><Link className="primary" href="/my-checklist">Build my checklist →</Link></div>
+        <div className="custom-cta"><div><span className="eyebrow">Anything else?</span><h2>Your task. Your checklist.</h2><p>Planning something we don't cover? Create a completely custom private checklist for any appointment, trip, application, errand, or task.</p></div><Link className="primary" href="/my-checklist">Create my checklist →</Link></div>
 
         <div id="how" className="feature">
           <div><span className="eyebrow">Simple by design</span><h2>Prepare once. Travel with confidence.</h2><p>BeforeYouGo separates shared information from your private preparation. Guides are read-only; your checkmarks and custom items belong to your local workspace.</p></div>
