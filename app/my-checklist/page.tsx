@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 type Item = { id: string; text: string; done: boolean };
 type Checklist = { id: string; title: string; items: Item[]; createdAt: string; updatedAt: string };
@@ -14,13 +14,17 @@ function readAll(ws: string): Checklist[] { try { const raw = localStorage.getIt
 function saveAll(ws: string, lists: Checklist[]) { try { localStorage.setItem(`${REGISTRY_KEY}:${ws}`, JSON.stringify(lists)); window.dispatchEvent(new Event("beforeyougo:checklist-updated")); } catch {} }
 
 export default function MyChecklist() {
-  const params = useSearchParams(); const router = useRouter();
+  const router = useRouter();
   const [ws, setWs] = useState(""); const [lists, setLists] = useState<Checklist[]>([]); const [editingId, setEditingId] = useState<string | null>(null); const [title, setTitle] = useState(""); const [text, setText] = useState(""); const [hydrated, setHydrated] = useState(false); const [showDelete, setShowDelete] = useState(false); const [showComplete, setShowComplete] = useState(false);
   const editing = lists.find((x) => x.id === editingId) ?? null;
 
   useEffect(() => { const id = getWorkspace(); setWs(id); setLists(readAll(id)); setHydrated(true); }, []);
   useEffect(() => { if (hydrated && ws) saveAll(ws, lists); }, [lists, hydrated, ws]);
-  useEffect(() => { if (!hydrated) return; const id = params.get("id"); setEditingId(id && lists.some((x) => x.id === id) ? id : null); }, [params, lists, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
+    const id = new URLSearchParams(window.location.search).get("id");
+    setEditingId(id && lists.some((x) => x.id === id) ? id : null);
+  }, [lists, hydrated]);
   useEffect(() => { if (editing) setTitle(editing.title); }, [editingId]);
 
   const openNew = () => { const now = new Date().toISOString(); const fresh: Checklist = { id: crypto.randomUUID(), title: "Untitled checklist", items: [], createdAt: now, updatedAt: now }; setLists((all) => [fresh, ...all]); router.push(`/my-checklist?id=${fresh.id}`); };
