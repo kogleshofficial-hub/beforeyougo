@@ -4,13 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { guides } from "@/lib/guides";
 
-const WORKSPACE_KEY = "beforeyougo:workspace:v2";
-const CHECKLIST_KEY = "beforeyougo:checklist:v2";
-type Saved = { id: string; title: string; items: { id: string; text: string; done: boolean }[]; updatedAt: string };
+type Saved = { kind: "custom" | "guide"; href: string; title: string; done: number; total: number; updatedAt: string };
+const SUMMARY_KEY = "beforeyougo:last-checklist:v1";
 
-function readSaved(): Saved | null {
-  try { const raw = localStorage.getItem(CHECKLIST_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
-}
+function readSaved(): Saved | null { try { const raw = localStorage.getItem(SUMMARY_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -23,8 +20,9 @@ export default function Home() {
   useEffect(() => {
     const sync = () => setSaved(readSaved());
     window.addEventListener("focus", sync);
+    window.addEventListener("storage", sync);
     window.addEventListener("beforeyougo:checklist-updated", sync);
-    return () => { window.removeEventListener("focus", sync); window.removeEventListener("beforeyougo:checklist-updated", sync); };
+    return () => { window.removeEventListener("focus", sync); window.removeEventListener("storage", sync); window.removeEventListener("beforeyougo:checklist-updated", sync); };
   }, []);
 
   const filtered = useMemo(() => {
@@ -34,8 +32,6 @@ export default function Home() {
       return (category === "All" || guide.category === category) && (!normalized || haystack.includes(normalized));
     });
   }, [query, category]);
-  const done = saved?.items.filter((item) => item.done).length ?? 0;
-  const total = saved?.items.length ?? 0;
 
   return (
     <main>
@@ -56,10 +52,10 @@ export default function Home() {
         <div className="trustrow"><span>✓ No account required</span><span>✓ Your checklist stays private</span><span>✓ Official source shown</span></div>
       </section>
 
-      {hydrated && saved && total > 0 && (
-        <section className="shell saved-banner" aria-label="Saved checklist">
-          <div><span className="eyebrow">Your saved checklist</span><strong>{saved.title || "My checklist"}</strong><span>{done} of {total} complete · Saved on this device</span></div>
-          <Link className="primary" href="/my-checklist">Continue checklist →</Link>
+      {hydrated && saved && saved.total > 0 && (
+        <section className="shell saved-banner" aria-label="Continue your saved checklist">
+          <div><span className="eyebrow">Saved on this device</span><strong>{saved.title}</strong><span>{saved.done} of {saved.total} complete · Last updated {new Date(saved.updatedAt).toLocaleString()}</span></div>
+          <Link className="primary" href={saved.href}>Continue checklist →</Link>
         </section>
       )}
 
