@@ -2,24 +2,72 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { guides } from "@/lib/guides";
 
-type Procedure={slug:string;title:string;country:string;category:string;icon:string;summary:string;source:string;sourceName:string;updated:string;items:string[];note:string;steps:string[]};
-const procedures:Procedure[]=[
-{slug:"malaysia-passport-renewal",title:"Renew a Malaysian passport",country:"Malaysia",category:"Travel",icon:"✈️",summary:"A practical pre-visit checklist for Malaysian passport renewal, with requirements linked to Immigration Department guidance.",source:"https://www.imi.gov.my/index.php/en/main-services/passport/malaysian-international-passport/",sourceName:"Malaysian Immigration Department",updated:"1 Sep 2026",items:["MyKad or temporary identification document","Previous passport for a renewal","For applicants under 18: check the parent/guardian requirements for your category","Confirm the receiving office before travelling"],note:"Requirements can differ by applicant category. Before leaving, open the official source and confirm the latest instructions for your situation.",steps:["Check your applicant category","Prepare the identity document and previous passport","Confirm the correct Immigration office","Bring any category-specific documents","Follow the official application or renewal process"]},
-{slug:"malaysia-driving-licence-renewal",title:"Renew a Malaysian driving licence",country:"Malaysia",category:"Transport",icon:"🚗",summary:"Know what to bring and where renewal can be completed before visiting JPJ, UTC, a kiosk or participating post office.",source:"https://www.jpj.gov.my/en/competent-drivers-license-cdl-renewal/",sourceName:"JPJ Malaysia",updated:"1 Sep 2026",items:["Original MyKad or passport","Original driving licence or copy","Representative identification if someone is acting for you","Photo requirements may apply","Payment for the applicable licence class and period"],note:"JPJ lists renewal conditions, locations and fees by licence type. Verify your class and eligibility on the official page before travelling.",steps:["Confirm your licence type and eligibility","Prepare your identification and current licence","Choose an eligible renewal location","Check the current fee","Complete the renewal"]},
-{slug:"us-passport-renewal",title:"Renew a U.S. passport",country:"United States",category:"Travel",icon:"🛂",summary:"Start with the official eligibility routes for online or mail renewal before making a trip to an acceptance facility.",source:"https://travel.state.gov/en/passports/renew-replace.html",sourceName:"U.S. Department of State",updated:"1 Sep 2026",items:["Confirm you are eligible for the renewal route you want","Use the official instructions for online or mail renewal","If in-person application is required, check the current appointment/location rules","Prepare the required passport materials"],note:"Eligibility depends on your passport history and circumstances. The official Department of State page is the source of truth.",steps:["Check renewal eligibility","Choose online, mail or in-person route","Prepare the required materials","Follow the official submission instructions","Track your application if the official service provides tracking"]},
-{slug:"malaysia-learner-licence-renewal",title:"Renew a Malaysian learner licence",country:"Malaysia",category:"Transport",icon:"🪪",summary:"A quick checklist for LDL renewal, including the maximum period and documents JPJ identifies.",source:"https://www.jpj.gov.my/en/renewal-of-learners-license-ldl/",sourceName:"JPJ Malaysia",updated:"1 Sep 2026",items:["Original MyKad or passport","Original learner/driving licence or copy","Representative identification when applicable","1 colour photo with the specified background and dimensions","Valid passport for foreign applicants"],note:"JPJ states that LDL renewal cannot exceed two years and the applicant must not be blacklisted. Check the current fee for your class.",steps:["Check that your LDL period does not exceed the allowed maximum","Prepare identification and current licence","Check photo requirements","Choose an eligible renewal location","Pay the applicable fee"]},
-{slug:"passport-renewal-starter",title:"Passport renewal — global starter",country:"International",category:"Travel",icon:"🌍",summary:"A country-neutral preparation checklist to use before opening your own government passport authority's instructions.",source:"https://www.icao.int/Security/FAL/TRIP/Pages/Publications.aspx",sourceName:"ICAO TRIP resources",updated:"1 Sep 2026",items:["Check your country's official passport authority","Confirm whether renewal is online, by mail or in person","Check identity-document requirements","Check photo rules and validity requirements","Confirm fees, appointment rules and processing times"],note:"This is intentionally a preparation guide, not a universal legal checklist. Passport rules are country-specific; always verify against your government authority.",steps:["Identify your passport authority","Open its official renewal instructions","Confirm your eligibility","Prepare the listed documents","Confirm where and when you need to submit"]},
-{slug:"before-any-government-visit",title:"Before any government-office visit",country:"International",category:"General",icon:"🏛️",summary:"A universal pre-visit workflow for checking requirements before travelling to a public-service office.",source:"https://www.oecd.org/gov/digital-government/",sourceName:"OECD Digital Government",updated:"1 Sep 2026",items:["Confirm the exact service you need","Check the official agency website","Confirm appointment requirements","Confirm documents and acceptable originals/copies","Check opening hours and location","Save the official instructions for reference"],note:"This checklist helps you prepare; it does not replace the official agency's instructions.",steps:["Define the exact service","Find the responsible official agency","Verify requirements","Confirm appointment and location details","Prepare everything before leaving"]}
-];
+export default function Home() {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
+  const categories = ["All", ...Array.from(new Set(guides.map((guide) => guide.category)))];
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return guides.filter((guide) => {
+      const matchesCategory = category === "All" || guide.category === category;
+      const haystack = `${guide.title} ${guide.country} ${guide.category} ${guide.summary}`.toLowerCase();
+      return matchesCategory && (!normalized || haystack.includes(normalized));
+    });
+  }, [query, category]);
 
-export default function Home(){
- const [query,setQuery]=useState(""); const [category,setCategory]=useState("All");
- const categories=["All",...Array.from(new Set(procedures.map(p=>p.category)))];
- const filtered=useMemo(()=>procedures.filter(p=>(category==="All"||p.category===category)&&(`${p.title} ${p.country} ${p.category} ${p.summary}`.toLowerCase().includes(query.toLowerCase()))),[query,category]);
- return <main><header className="shell nav"><Link href="/" className="brand"><span className="mark">✓</span>BeforeYouGo</Link><nav className="navlinks"><a href="#guides">Guides</a><a href="#how">How it works</a></nav></header>
- <section className="shell hero"><span className="eyebrow"><span className="dot"/> Built around official sources</span><h1>Know what you need <span>before you go.</span></h1><p>Stop making unnecessary trips. Find a clear pre-visit checklist for documents, appointments, locations and next steps — then verify it against the official source.</p><div className="search"><input aria-label="Search procedures" placeholder="Try “passport renewal” or “driving licence”…" value={query} onChange={e=>setQuery(e.target.value)}/><button className="primary" onClick={()=>document.getElementById("guides")?.scrollIntoView({behavior:"smooth"})}>Find my checklist</button></div></section>
- <section id="guides" className="shell section"><div className="sectionhead"><div><h2>Start with a real task</h2><p>Small, useful guides first. More countries and services can be added with verified sources.</p></div><div className="filters">{categories.map(c=><button key={c} className={`filter ${category===c?"active":""}`} onClick={()=>setCategory(c)}>{c}</button>)}</div></div><div className="grid">{filtered.length?filtered.map(p=><Link className="card" href={`/guide/${p.slug}`} key={p.slug}><div className="cardtop"><span className="icon">{p.icon}</span><span className="pill">{p.country}</span></div><h3>{p.title}</h3><p>{p.summary}</p><div className="meta"><span>{p.category}</span><span>Verified {p.updated}</span></div></Link>):<div className="empty">No guide matches that search yet. Try a broader phrase.</div>}</div>
- <div id="how" className="feature"><div><span className="eyebrow">Simple by design</span><h2>Prepare once. Travel with confidence.</h2><p>BeforeYouGo turns scattered official instructions into a short preparation flow. We keep the source visible so you can make the final call from the authority that actually controls the process.</p></div><div className="steps"><div className="step"><b>01</b><div><b>Find your task</b><span>Search by what you're trying to do.</span></div></div><div className="step"><b>02</b><div><b>Check your list</b><span>See documents, appointments and practical steps.</span></div></div><div className="step"><b>03</b><div><b>Verify the source</b><span>Open the official guidance before you leave.</span></div></div></div></div></section>
- <footer className="shell footer"><strong>BeforeYouGo</strong><span>Information is a preparation aid, not a replacement for official instructions.</span><span className="creator">Created by Koglesh R. Murugan</span></footer></main>
+  return (
+    <main>
+      <header className="shell nav">
+        <Link href="/" className="brand" aria-label="BeforeYouGo home"><span className="mark">✓</span>BeforeYouGo</Link>
+        <nav className="navlinks" aria-label="Primary navigation">
+          <a href="#guides">Guides</a>
+          <a href="#how">How it works</a>
+        </nav>
+      </header>
+
+      <section className="shell hero">
+        <span className="eyebrow"><span className="dot" /> Official-source-first</span>
+        <h1>Know what you need <span>before you go.</span></h1>
+        <p>Turn confusing pre-visit requirements into a clear checklist. Find what to prepare, then open the official source before you leave.</p>
+        <form className="search" onSubmit={(event) => { event.preventDefault(); document.getElementById("guides")?.scrollIntoView({ behavior: "smooth" }); }}>
+          <label className="sr-only" htmlFor="guide-search">Search guides</label>
+          <input id="guide-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try “passport renewal” or “driving licence”…" autoComplete="off" />
+          <button className="primary" type="submit">Find my checklist</button>
+        </form>
+        <div className="trustrow" aria-label="Product principles">
+          <span>✓ No account required</span><span>✓ Your checklist stays private</span><span>✓ Official source shown</span>
+        </div>
+      </section>
+
+      <section id="guides" className="shell section" aria-labelledby="guides-title">
+        <div className="sectionhead">
+          <div><span className="eyebrow">Useful first</span><h2 id="guides-title">Start with a real task</h2><p>Focused guides with the source visible, so you can verify before travelling.</p></div>
+          <div className="filters" aria-label="Filter guides">{categories.map((item) => <button type="button" key={item} className={`filter ${category === item ? "active" : ""}`} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}</div>
+        </div>
+        <div className="resultsbar"><span>{filtered.length} {filtered.length === 1 ? "guide" : "guides"}</span>{query && <button type="button" className="clear" onClick={() => setQuery("")}>Clear search</button>}</div>
+        <div className="grid">
+          {filtered.length ? filtered.map((guide) => (
+            <Link className="card" href={`/guide/${guide.slug}`} key={guide.slug}>
+              <div className="cardtop"><span className="icon" aria-hidden="true">{guide.icon}</span><span className="pill">{guide.country}</span></div>
+              <h3>{guide.title}</h3><p>{guide.summary}</p>
+              <div className="meta"><span>{guide.category}</span><span>Source checked {guide.verified}</span></div>
+            </Link>
+          )) : <div className="empty"><strong>No guide found yet.</strong><span>Try a broader search. We only list guides we can explain and source.</span></div>}
+        </div>
+
+        <div id="how" className="feature">
+          <div><span className="eyebrow">Simple by design</span><h2>Prepare once. Travel with confidence.</h2><p>BeforeYouGo turns scattered instructions into a short preparation flow. Your checkmarks are personal to your browser; the underlying guide is shared and read-only.</p></div>
+          <div className="steps">
+            <div className="step"><b>01</b><div><strong>Find your task</strong><span>Search for what you are actually trying to do.</span></div></div>
+            <div className="step"><b>02</b><div><strong>Build your list</strong><span>Tick off your own preparation items. Nobody else sees your progress.</span></div></div>
+            <div className="step"><b>03</b><div><strong>Verify before leaving</strong><span>Open the official source because rules can change.</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="shell footer"><div><strong>BeforeYouGo</strong><span>Preparation aid only · Always verify official requirements.</span></div><div className="creator">Created by Koglesh R. Murugan</div></footer>
+    </main>
+  );
 }
